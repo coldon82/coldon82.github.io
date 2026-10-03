@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Rutes Collserola</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { --bg:#f6f5f1; --panel:#fff; --ink:#1f2421; --mut:#6b726d; --line:#dcdad2; --acc:#2f6f4f;
+          --carretera:#d94f3d; --btt:#2f7fc1; --gravel:#d9962b; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161a17; --panel:#1f2521; --ink:#e8ebe6; --mut:#98a19a; --line:#343c36; --acc:#6fbf94; }
+  }
+  * { box-sizing:border-box }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.4 system-ui,sans-serif }
+  #app { display:grid; grid-template-columns:340px 1fr; height:100% }
+  aside { background:var(--panel); border-right:1px solid var(--line); overflow:auto; padding:14px 16px 24px }
+  h1 { font-size:17px; margin:0 0 2px } .sub { color:var(--mut); font-size:12px; margin-bottom:12px }
+  fieldset { border:0; border-top:1px solid var(--line); margin:0; padding:10px 0 4px }
+  legend { padding:0 6px 0 0; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--mut) }
+  label.chk { display:inline-flex; align-items:center; gap:5px; margin:0 10px 4px 0; cursor:pointer }
+  .dot { width:10px; height:10px; border-radius:50%; display:inline-block }
+  .rng { margin:6px 0 10px } .rng .row { display:flex; justify-content:space-between; font-size:12px; color:var(--mut) }
+  .rng .row b { color:var(--ink) }
+  .dual { position:relative; height:22px }
+  .dual input { position:absolute; width:100%; pointer-events:none; -webkit-appearance:none; background:none; margin:0; top:2px }
+  .dual input::-webkit-slider-thumb { pointer-events:auto; -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:var(--acc); border:2px solid var(--panel); box-shadow:0 0 0 1px var(--acc); cursor:pointer }
+  .dual input::-moz-range-thumb { pointer-events:auto; width:12px; height:12px; border-radius:50%; background:var(--acc); border:2px solid var(--panel); cursor:pointer }
+  .dual .track { position:absolute; left:0; right:0; top:10px; height:3px; background:var(--line); border-radius:2px }
+  .dual .fill { position:absolute; top:10px; height:3px; background:var(--acc); border-radius:2px }
+  select,input[type=text] { width:100%; padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--ink); font:inherit }
+  .sec button { margin:0 6px 6px 0; padding:5px 10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); border-radius:16px; cursor:pointer; font:inherit }
+  .sec button.on { background:var(--acc); color:#fff; border-color:var(--acc) }
+  .stat { display:flex; gap:14px; margin:10px 0 6px; font-size:12px; color:var(--mut) } .stat b { color:var(--ink); font-size:16px; display:block }
+  #list { margin-top:6px }
+  .it { padding:7px 8px; border-radius:6px; cursor:pointer; border-left:4px solid var(--c); margin-bottom:3px; background:var(--bg) }
+  .it:hover,.it.sel { outline:1px solid var(--acc) } .it .t { font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .it .m { font-size:12px; color:var(--mut) }
+  #map { height:100% }
+  .modes { display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-bottom:10px }
+  .modes button { flex:1; padding:7px 0; border:0; background:var(--bg); color:var(--ink); font:inherit; font-weight:600; cursor:pointer }
+  .modes button.on { background:var(--acc); color:#fff }
+  #sfind { margin-top:10px } #sfind[hidden], #segnote[hidden] { display:none }
+  #segnote { margin-top:6px }
+  .it.seg { border-left-color:var(--acc) }
+  .sechead { margin:12px 0 4px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--mut) }
+  #onlybar i { font-style:normal; color:var(--mut) }
+  #onlybar { display:flex; flex-direction:column; gap:8px; margin-top:10px; padding:8px 10px; border:1px solid var(--acc); border-radius:6px }
+  #onlybar .acts { display:flex; gap:6px } #onlybar .acts .reset { margin:0 } #back[hidden] { display:none }
+  .prof { margin:8px 0 2px; padding:6px 6px 2px; border:1px solid var(--line); border-radius:6px; background:var(--bg) }
+  .prof svg { display:block; width:100%; height:auto; touch-action:none }
+  .prof .lbl { font-size:10px; fill:var(--mut) } .prof .ax { stroke:var(--line); stroke-width:1 } .prof .ln { fill:none; stroke:var(--acc); stroke-width:1.6; stroke-linejoin:round }
+  .prof .ar { fill:var(--acc); opacity:.18 } .prof .cur { stroke:var(--ink); stroke-width:1; stroke-dasharray:3 2 } .prof .dot { fill:var(--acc); stroke:var(--panel); stroke-width:2 }
+  .prof .read { font-size:11px; fill:var(--ink); font-variant-numeric:tabular-nums }
+  .it.hov { outline:1px solid var(--acc); background:var(--line) }
+  #onlybar[hidden] { display:none }
+  #onlybar .ctx { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+  .it .m { display:flex; justify-content:space-between; gap:8px }
+  .gpx { color:var(--acc); text-decoration:none; font-weight:600; white-space:nowrap }
+  .gpx:hover { text-decoration:underline }
+  .reset { margin-top:8px; margin-right:6px; background:none; border:1px solid var(--line); color:var(--ink); padding:5px 10px; border-radius:6px; cursor:pointer }
+  .leaflet-container { background:var(--bg) }
+  @media (max-width:760px){ #app{ grid-template-columns:1fr; grid-template-rows:55% 45% } aside{ order:2; border-right:0; border-top:1px solid var(--line) } #map{ order:1 } }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside>
+    <a href="../" style="font-size:12px;color:var(--mut);text-decoration:none">← Projectes</a>
+    <h1>Rutes de bici · Collserola</h1>
+    <div class="sub" id="sub"></div>
+    <div class="modes" role="tablist">
+      <button id="m-tracks" class="on" role="tab">Per tracks</button>
+      <button id="m-segs" role="tab">Per segments</button>
+    </div>
+
+    <fieldset><legend>Tipus</legend>
+      <label class="chk"><input type="checkbox" class="tip" value="carretera" checked><span class="dot" style="background:var(--carretera)"></span>Carretera</label>
+      <label class="chk"><input type="checkbox" class="tip" value="btt" checked><span class="dot" style="background:var(--btt)"></span>BTT</label>
+      <label class="chk"><input type="checkbox" class="tip" value="gravel" checked><span class="dot" style="background:var(--gravel)"></span>Gravel</label>
+    </fieldset>
+
+    <fieldset class="sec"><legend>Sector</legend>
+      <div id="sectors"></div>
+    </fieldset>
+
+    <fieldset><legend>Topònim proper</legend>
+      <input type="text" id="tq" placeholder="Cerca cim, coll o indret…" list="topolist">
+      <datalist id="topolist"></datalist>
+      <div class="sub" style="margin:4px 0 0">Rutes que passen a menys de 300 m.</div>
+    </fieldset>
+
+    <fieldset><legend>Mesures</legend>
+      <div class="rng" data-k="km" data-u="km"></div>
+      <div class="rng" data-k="desn" data-u="m"></div>
+      <div class="rng" data-k="min" data-u="min"></div>
+    </fieldset>
+
+    <div class="stat"><div><b id="n">0</b>rutes</div><div><b id="skm">0</b>km</div><div><b id="sdesn">0</b>m↑</div></div>
+    <button class="reset" id="reset">Reinicia filtres</button>
+    <button class="reset" id="gpxall">Descarrega GPX filtrades</button>
+    <div id="onlybar" hidden><div class="ctx"><i></i> <b></b></div><div class="acts"><button class="reset" id="back">← Enrere</button><button class="reset" id="clearonly"></button></div></div>
+    <input type="text" id="sfind" placeholder="Cerca un segment…" hidden>
+    <div class="sub" id="segnote" hidden></div>
+    <div id="list"></div>
+  </aside>
+  <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="data.js"></script>
+<script>
+const COL = {carretera:'#d94f3d', btt:'#2f7fc1', gravel:'#d9962b'};
+const SECT_COL = {'Cerdanyola':'#8e5ea2','Sant Cugat':'#3a9d6e','Sant Just':'#c9763a','Molins':'#3b82b6'};
+const LAB = {km:'Longitud', desn:'Desnivell +', min:'Temps (mov.)'};
+
+function decode(s){let i=0,lat=0,lon=0,o=[];while(i<s.length){for(let k=0;k<2;k++){let sh=0,r=0,b;do{b=s.charCodeAt(i++)-63;r|=(b&31)<<sh;sh+=5}while(b>=32);const d=(r&1)?~(r>>1):(r>>1);k?lon+=d:lat+=d}o.push([lat/1e5,lon/1e5])}return o}
+const fmtMin = m => m>=60 ? Math.floor(m/60)+'h'+String(m%60).padStart(2,'0') : m+' min';
+
+const map = L.map('map',{zoomControl:true});
+const icgc = layer => L.tileLayer.wms('https://geoserveis.icgc.cat/servei/catalunya/mapa-base/wms',
+  {layers:layer, format:'image/png', transparent:false, version:'1.3.0', maxZoom:19, attribution:'© Institut Cartogràfic i Geològic de Catalunya'});
+const base = {
+  'Topogràfic (ICGC)': icgc('topografic'),
+  'Topogràfic gris (ICGC)': icgc('topografic-gris'),
+  'Ortofoto (ICGC)': icgc('orto')
+};
+base['Topogràfic (ICGC)'].addTo(map);
+L.control.layers(base,null,{position:'topright'}).addTo(map);
+const park = L.polygon(DATA.parc,{color:'#2f6f4f',weight:2,fill:false,dashArray:'6 4'}).addTo(map);
+map.fitBounds(park.getBounds());
+const zones = {};
+for (const [n,g] of Object.entries(DATA.sectors)) {
+  zones[n] = L.polygon(g,{color:SECT_COL[n],weight:1,fillColor:SECT_COL[n],fillOpacity:.10,interactive:false}).addTo(map);
+  const c = zones[n].getBounds().getCenter();
+  L.marker(c,{interactive:false,icon:L.divIcon({className:'',html:`<div style="font:600 12px system-ui;color:${SECT_COL[n]};text-shadow:0 0 3px #fff,0 0 3px #fff">${n}</div>`})}).addTo(map);
+}
+const topoLayer = L.layerGroup().addTo(map);
+const profLayer = L.layerGroup().addTo(map);   // punt que segueix el cursor sobre el perfil
+
+const R = DATA.rutes.map(r => ({...r, ll:decode(r.poly)}));
+const lines = R.map(r => L.polyline(r.ll,{color:COL[r.tipus],weight:3,opacity:.65,bubblingMouseEvents:false})
+  .bindTooltip(r.nom,{sticky:true})
+  .on('click',()=>goTrack(r.id))
+  .on('mouseover',()=>{ setHover([r.id]); const e=document.querySelector(`.it[data-id="${r.id}"]`); if(e) e.scrollIntoView({block:'nearest'}); })
+  .on('mouseout',()=>setHover([])));
+const byId = Object.fromEntries(R.map((r,i)=>[r.id,i]));
+
+// estat dels filtres
+let selected = null;          // mode tracks: id de la ruta aïllada
+let segSel = null;            // mode segments: índex del segment triat
+let mode = 'tracks';
+const sfind = document.getElementById('sfind');
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const trk = r => `<trk><name>${esc(r.nom)}</name><desc>${esc(r.data+' · '+r.km+' km · '+r.desn+' m+ · '+r.tipus)}</desc><trkseg>`
+  + r.ll.map(p=>`<trkpt lat="${p[0]}" lon="${p[1]}"/>`).join('') + '</trkseg></trk>';
+function downloadGPX(rs, filename){
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Rutes Collserola" xmlns="http://www.topografix.com/GPX/1/1">`
+    + rs.map(trk).join('') + '</gpx>';
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([xml],{type:'application/gpx+xml'})); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+let visible = [];
+let hover = null;               // Set d'ids ressaltats en passar el ratolí
+const F = {sector:null, topo:null, rng:{}};
+const SEGS = DATA.segs || [];
+const segCount = SEGS.map(()=>0);      // rutes (totals) que passen per cada segment
+R.forEach(r => (r.segs||[]).forEach(i => segCount[i]++));
+const withSegData = R.filter(r => r.segs).length;
+// Lliscadors: el rang visible s'ajusta als valors mínim i màxim de les rutes que deixen passar els altres filtres.
+// F.touched[k] = l'usuari ha triat un rang; si no, el filtre no restringeix res.
+const RK = ['km','desn','min'];
+F.touched = {km:false, desn:false, min:false};
+const rngUI = {};
+const fmtRng = (k,v) => k==='min' ? fmtMin(v) : v;
+const rangeOk = (r, skip) => RK.every(k => k===skip || !F.touched[k] || (r[k]>=F.rng[k][0] && r[k]<=F.rng[k][1]));
+document.querySelectorAll('.rng').forEach(el=>{
+  const k = el.dataset.k, u = el.dataset.u;
+  el.innerHTML = `<div class="row"><span>${LAB[k]}</span><span><b class="a"></b> – <b class="b"></b> ${u}</span></div>
+    <div class="dual"><div class="track"></div><div class="fill"></div>
+    <input type="range" class="lo"><input type="range" class="hi"></div>`;
+  const a=el.querySelector('.lo'), b=el.querySelector('.hi');
+  rngUI[k] = {el, a, b, fill:el.querySelector('.fill'), lo:0, hi:0};
+  a.oninput = b.oninput = () => { F.rng[k] = [Math.min(+a.value,+b.value), Math.max(+a.value,+b.value)]; F.touched[k] = true; render(); };
+  el._reset = () => { F.touched[k] = false; render(); };
+});
+// pool = rutes que passen els filtres que no són rangs; cada rang s'ajusta segons els altres dos
+function syncRanges(pool){
+  RK.forEach(k => {
+    const ui = rngUI[k], vals = pool.filter(r => rangeOk(r,k)).map(r => r[k]);
+    if (vals.length) { ui.lo = Math.floor(Math.min(...vals)); ui.hi = Math.ceil(Math.max(...vals)); }
+    let [x,y] = F.touched[k] ? F.rng[k] : [ui.lo, ui.hi];
+    x = Math.max(ui.lo, Math.min(x, ui.hi)); y = Math.max(ui.lo, Math.min(y, ui.hi));
+    if (F.touched[k]) F.rng[k] = [x,y];
+    for (const inp of [ui.a, ui.b]) { inp.min = ui.lo; inp.max = ui.hi; }
+    ui.a.value = x; ui.b.value = y;
+    ui.el.querySelector('.a').textContent = fmtRng(k,x); ui.el.querySelector('.b').textContent = fmtRng(k,y);
+    const span = ui.hi - ui.lo || 1;
+    ui.fill.style.left = (x-ui.lo)/span*100+'%'; ui.fill.style.right = (100-(y-ui.lo)/span*100)+'%';
+  });
+}
+
+// sectors
+const secEl = document.getElementById('sectors');
+const secs = ['Tots', ...Object.keys(DATA.sectors)];
+secs.forEach(s=>{
+  const b=document.createElement('button'); b.textContent=s; if(s==='Tots')b.classList.add('on');
+  b.onclick=()=>{F.sector = s==='Tots'?null:s; secEl.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+    if(F.sector) map.fitBounds(zones[F.sector].getBounds()); else map.fitBounds(park.getBounds()); render()};
+  secEl.appendChild(b);
+});
+
+// topònims
+const tl = document.getElementById('topolist');
+const tcount = DATA.topos.map((_,i)=>R.filter(r=>r.topos.includes(i)).length);
+const tidx = DATA.topos.map((t,i)=>i).sort((a,b)=>DATA.topos[a].n.localeCompare(DATA.topos[b].n,'ca'));
+const label = i => `${DATA.topos[i].n}${DATA.topos[i].ele?' ('+Math.round(DATA.topos[i].ele)+' m)':''} · ${tcount[i]}`;
+tidx.forEach(i=>{const o=document.createElement('option'); o.value=label(i); tl.appendChild(o)});
+const tmap = Object.fromEntries(tidx.map(i=>[label(i).toLowerCase(),i]));
+const tq = document.getElementById('tq');
+tq.oninput = () => {
+  const v = tq.value.trim().toLowerCase();
+  let i = tmap[v];
+  if (i===undefined && v) { const m = tidx.filter(j=>DATA.topos[j].n.toLowerCase()===v); if(m.length===1) i=m[0]; }
+  F.topo = i===undefined ? null : i; render();
+};
+
+document.getElementById('gpxall').onclick = () => { if(visible.length) downloadGPX(visible, `collserola_${visible.length}_rutes.gpx`) };
+document.querySelectorAll('.tip').forEach(c=>c.onchange=render);
+document.getElementById('reset').onclick = () => {
+  document.querySelectorAll('.tip').forEach(c=>c.checked=true);
+  document.querySelectorAll('.rng').forEach(e=>e._reset());
+  tq.value=''; F.topo=null; sfind.value=''; segSel=null; hist.length=0; secEl.querySelector('button').click();
+};
+
+// Navegació: track -> els seus segments -> rutes d'un segment -> track...
+const asideEl = document.querySelector('aside');
+const hist = [];                 // vistes anteriors (mode, selecció, cerca, scroll i vista del mapa)
+const snap = () => ({mode, selected, segSel, find:sfind.value, scroll:asideEl.scrollTop, c:map.getCenter(), z:map.getZoom()});
+function setTabs(){
+  document.getElementById('m-tracks').classList.toggle('on', mode==='tracks');
+  document.getElementById('m-segs').classList.toggle('on', mode==='segments');
+}
+function goBack(){
+  const s = hist.pop(); if (!s) return;
+  mode = s.mode; selected = s.selected; segSel = s.segSel; sfind.value = s.find;
+  setTabs(); render();
+  map.setView(s.c, s.z, {animate:false}); asideEl.scrollTop = s.scroll;
+}
+function setMode(m){
+  hist.length = 0;
+  mode = m; selected = null; segSel = null; sfind.value = '';
+  document.getElementById('m-tracks').classList.toggle('on', m==='tracks');
+  document.getElementById('m-segs').classList.toggle('on', m==='segments');
+  render();
+}
+function goTrack(id){            // aïlla un track (mode tracks); tornar-hi a clicar el desaïlla
+  if (mode==='tracks' && selected===id) return clearOnly();
+  hist.push(snap());
+  mode = 'tracks'; segSel = null; selected = id;
+  setTabs(); render(); map.fitBounds(lines[byId[id]].getBounds(),{padding:[30,30]});
+}
+function goSegment(i){           // mostra les rutes que passen per un segment (mode segments)
+  hist.push(snap());
+  mode = 'segments'; selected = null; segSel = i;
+  setTabs(); render();
+  if (visible.length) map.fitBounds(L.featureGroup(visible.map(r=>lines[byId[r.id]])).getBounds(),{padding:[30,30]});
+}
+function clearOnly(){            // surt de l'aïllament / de la selecció de segment (i oblida l'historial)
+  hist.length = 0;
+  if (mode==='tracks' && selected!==null) { selected = null; render(); }
+  else if (mode==='segments' && segSel!==null) { segSel = null; render(); }
+}
+document.getElementById('m-tracks').onclick = () => setMode('tracks');
+document.getElementById('m-segs').onclick = () => setMode('segments');
+sfind.oninput = render;
+map.on('click', clearOnly);
+document.addEventListener('keydown', e => { if (e.key==='Escape') clearOnly(); });
+document.getElementById('clearonly').onclick = clearOnly;
+document.getElementById('back').onclick = goBack;
+// tocar qualsevol filtre surt de l'aïllament abans que el filtre s'apliqui
+document.querySelector('aside').addEventListener('input', e => { if (e.target.closest('fieldset')) selected = null; }, true);
+document.querySelector('aside').addEventListener('click', e => { if (e.target.closest('fieldset, #reset')) selected = null; }, true);
+
+function trackItem(r, onclick){
+  const d=document.createElement('div'); d.className='it'+(r.id===selected?' sel':''); d.dataset.id=r.id; d.style.setProperty('--c',COL[r.tipus]);
+  d.innerHTML=`<div class="t"></div><div class="m"><span>${r.data} · ${r.km} km · ${r.desn} m↑ · ${fmtMin(r.min)} · ${r.sector||''}</span><a class="gpx" href="#" title="Descarrega GPX">GPX ⬇</a></div>`;
+  d.querySelector('.t').textContent=r.nom; d.onclick=onclick;
+  d.onmouseenter=()=>setHover([r.id]); d.onmouseleave=()=>setHover([]);
+  d.querySelector('.gpx').onclick=e=>{ e.preventDefault(); e.stopPropagation(); downloadGPX([r], `${r.data}_${r.nom.replace(/[^\w\-]+/g,'_').slice(0,40)}_${r.id}.gpx`) };
+  return d;
+}
+function segItem(i, n){
+  const d=document.createElement('div'); d.className='it seg';
+  d.innerHTML=`<div class="t"></div><div class="m"><span>${n} ${n===1?'ruta':'rutes'}</span></div>`;
+  d.querySelector('.t').textContent=SEGS[i].n; d.title=SEGS[i].n; d.onclick=()=>goSegment(i);
+  // a la llista de segments, ressalta al mapa les rutes que hi passen (el segment no té traçat propi)
+  d.onmouseenter=()=>{ if(mode==='segments' && segSel===null) setHover(visible.filter(r=>(r.segs||[]).includes(i)).map(r=>r.id)); };
+  d.onmouseleave=()=>setHover([]);
+  return d;
+}
+function restyle(){
+  const single = visible.length===1 || selected!==null;
+  R.forEach((r,i) => {
+    const l = lines[i]; if (!map.hasLayer(l)) return;
+    if (hover) {
+      if (hover.has(r.id)) { l.setStyle({weight:6,opacity:1}); l.bringToFront(); } else l.setStyle({weight:2,opacity:.2});
+    } else l.setStyle(single ? {weight:5,opacity:1} : {weight:3,opacity:.65});
+  });
+  document.querySelectorAll('.it[data-id]').forEach(e => e.classList.toggle('hov', !!hover && hover.has(e.dataset.id)));
+}
+function setHover(ids){ hover = ids && ids.length ? new Set(ids) : null; restyle(); }
+// --- perfil d'elevació d'un track (SVG): el cursor mou un punt per la ruta al mapa
+function cumDist(r){
+  if (r._cum) return r._cum;
+  const c=[0], R_=6371000, rad=Math.PI/180;
+  for (let i=1;i<r.ll.length;i++){
+    const [a,b]=r.ll[i-1], [x,y]=r.ll[i];
+    const h=Math.sin((x-a)*rad/2)**2+Math.cos(a*rad)*Math.cos(x*rad)*Math.sin((y-b)*rad/2)**2;
+    c.push(c[i-1]+2*R_*Math.asin(Math.sqrt(h)));
+  }
+  return r._cum = c;
+}
+function pointAt(r, f){          // posició sobre el traçat a la fracció f (0..1) de la distància
+  const c=cumDist(r), target=f*c[c.length-1];
+  let i=1; while (i<c.length-1 && c[i]<target) i++;
+  const t=(target-c[i-1])/((c[i]-c[i-1])||1);
+  return [r.ll[i-1][0]+(r.ll[i][0]-r.ll[i-1][0])*t, r.ll[i-1][1]+(r.ll[i][1]-r.ll[i-1][1])*t];
+}
+function profileEl(r){
+  const [D,A]=r.el, W=300, H=118, ml=32, mr=8, mt=14, mb=18;
+  const dmax=D[D.length-1]||1;
+  let lo=Math.min(...A), hi=Math.max(...A);
+  const step = hi-lo>400?100:hi-lo>150?50:20;
+  lo=Math.floor(lo/step)*step; hi=Math.ceil(hi/step)*step; if(hi===lo) hi=lo+step;
+  const X=d=>ml+d/dmax*(W-ml-mr), Y=a=>mt+(1-(a-lo)/(hi-lo))*(H-mt-mb);
+  const pts=D.map((d,i)=>`${X(d).toFixed(1)},${Y(A[i]).toFixed(1)}`);
+  let grid='';
+  for (let v=lo; v<=hi; v+=step) grid+=`<line class="ax" x1="${ml}" x2="${W-mr}" y1="${Y(v)}" y2="${Y(v)}"/><text class="lbl" x="${ml-4}" y="${Y(v)+3}" text-anchor="end">${v}</text>`;
+  const km=dmax/1000, kt=[0,km/2,km];
+  grid+=kt.map((k,i)=>`<text class="lbl" x="${X(k*1000)}" y="${H-5}" text-anchor="${i===0?'start':i===2?'end':'middle'}">${k.toFixed(k%1?1:0)} km</text>`).join('');
+  const div=document.createElement('div'); div.className='prof';
+  div.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Perfil d'elevació">${grid}
+    <polygon class="ar" points="${X(0)},${Y(lo)} ${pts.join(' ')} ${X(dmax)},${Y(lo)}"/><polyline class="ln" points="${pts.join(' ')}"/>
+    <line class="cur" y1="${mt}" y2="${H-mb}" visibility="hidden"/><circle class="dot" r="3.5" visibility="hidden"/>
+    <text class="read" x="${ml}" y="9"></text><rect x="${ml}" y="${mt}" width="${W-ml-mr}" height="${H-mt-mb}" fill="transparent"/></svg>`;
+  const svg=div.querySelector('svg'), cur=svg.querySelector('.cur'), dot=svg.querySelector('.dot'), read=svg.querySelector('.read');
+  const off=()=>{ cur.setAttribute('visibility','hidden'); dot.setAttribute('visibility','hidden'); read.textContent=''; profLayer.clearLayers(); };
+  const move=e=>{
+    const b=svg.getBoundingClientRect(), x=((e.clientX-b.left)/b.width*W-ml)/(W-ml-mr)*dmax;
+    let i=0; while (i<D.length-1 && D[i+1]<x) i++;
+    if (i<D.length-1 && x-D[i]>D[i+1]-x) i++;
+    cur.setAttribute('x1',X(D[i])); cur.setAttribute('x2',X(D[i])); cur.setAttribute('visibility','visible');
+    dot.setAttribute('cx',X(D[i])); dot.setAttribute('cy',Y(A[i])); dot.setAttribute('visibility','visible');
+    const g = i>0 ? (A[i]-A[i-1])/((D[i]-D[i-1])||1)*100 : 0;
+    read.textContent=`${(D[i]/1000).toFixed(1)} km · ${A[i]} m · ${g>=0?'+':''}${g.toFixed(0)} %`;
+    profLayer.clearLayers(); L.circleMarker(pointAt(r,D[i]/dmax),{radius:7,color:'#fff',weight:2,fillColor:'#2f6f4f',fillOpacity:1,interactive:false}).addTo(profLayer);
+  };
+  svg.addEventListener('pointermove',move); svg.addEventListener('pointerleave',off);
+  return div;
+}
+function head(txt){ const h=document.createElement('div'); h.className='sechead'; h.textContent=txt; return h; }
+function note(txt){ const m=document.createElement('div'); m.className='sub'; m.textContent=txt; return m; }
+
+function render(){
+  hover = null; profLayer.clearLayers();
+  const tipus = new Set([...document.querySelectorAll('.tip:checked')].map(c=>c.value));
+  // rutes que compleixen els filtres (sense tenir en compte l'aïllament ni el segment triat)
+  const pool = R.filter(r => tipus.has(r.tipus)
+      && (!F.sector || (r.sectors[F.sector]||0) >= .2)
+      && (F.topo===null || r.topos.includes(F.topo))
+      && (mode!=='segments' || segSel===null || (r.segs||[]).includes(segSel)));
+  syncRanges(pool);
+  const base = pool.filter(r => rangeOk(r));
+  let vis;
+  if (mode==='tracks') vis = selected!==null ? [R[byId[selected]]] : base;
+  else vis = segSel!==null ? base.filter(r => (r.segs||[]).includes(segSel)) : base;
+  const show = new Set(vis.map(r=>r.id));
+  R.forEach((r,i)=>{
+    if (show.has(r.id)) lines[i].addTo(map); else lines[i].remove();
+  });
+  topoLayer.clearLayers();
+  if (F.topo!==null) { const t=DATA.topos[F.topo]; L.circle(t.ll,{radius:300,color:'#000',weight:1,fillOpacity:.05}).addTo(topoLayer);
+    L.marker(t.ll).bindTooltip(t.n,{permanent:true}).addTo(topoLayer); if(vis.length===0) map.setView(t.ll,14); }
+  visible = vis;
+  document.getElementById('back').hidden = !hist.length;
+  document.getElementById('n').textContent = vis.length;
+  document.getElementById('skm').textContent = Math.round(vis.reduce((s,r)=>s+r.km,0));
+  document.getElementById('sdesn').textContent = vis.reduce((s,r)=>s+r.desn,0).toLocaleString('ca');
+
+  // barra de context
+  const bar = document.getElementById('onlybar');
+  const ctx = mode==='tracks' && selected!==null ? ['Només:', R[byId[selected]].nom, 'Mostra totes']
+            : mode==='segments' && segSel!==null ? ['Segment:', SEGS[segSel].n, 'Tots els segments'] : null;
+  bar.hidden = !ctx;
+  if (ctx) { bar.querySelector('i').textContent=ctx[0]; bar.querySelector('b').textContent=ctx[1]; document.getElementById('clearonly').textContent=ctx[2]; }
+
+  const ls = document.getElementById('list'); ls.innerHTML='';
+  const nt = document.getElementById('segnote');
+  sfind.hidden = !(mode==='segments' && segSel===null);
+  nt.hidden = mode!=='segments'; nt.textContent = `Segments disponibles per a ${withSegData} de ${R.length} rutes.`;
+
+  if (mode==='tracks' && selected!==null) {
+    const r = vis[0];
+    ls.appendChild(trackItem(r, ()=>goTrack(r.id)));
+    if (r.el) ls.appendChild(profileEl(r)); else ls.appendChild(note('Sense perfil d\'elevació per a aquesta ruta.'));
+    ls.appendChild(head('Segments d\'aquesta ruta'));
+    if (!r.segs) ls.appendChild(note('Sense dades de segments per a aquesta ruta.'));
+    else if (!r.segs.length) ls.appendChild(note('Aquesta ruta no passa per cap segment.'));
+    else r.segs.slice().sort((a,b)=>SEGS[a].n.localeCompare(SEGS[b].n,'ca')).forEach(i => ls.appendChild(segItem(i, segCount[i])));
+  } else if (mode==='segments' && segSel===null) {
+    const cnt = new Map();
+    base.forEach(r => (r.segs||[]).forEach(i => cnt.set(i,(cnt.get(i)||0)+1)));
+    const q = sfind.value.trim().toLowerCase();
+    const rows = [...cnt].filter(([i]) => !q || SEGS[i].n.toLowerCase().includes(q))
+      .sort((a,b) => b[1]-a[1] || SEGS[a[0]].n.localeCompare(SEGS[b[0]].n,'ca'));
+    ls.appendChild(head(`${rows.length} segments`));
+    rows.slice(0,200).forEach(([i,n]) => ls.appendChild(segItem(i,n)));
+    if (rows.length>200) ls.appendChild(note(`…i ${rows.length-200} més (cerca o afina els filtres)`));
+    if (!rows.length) ls.appendChild(note('Cap segment amb aquests filtres.'));
+  } else {
+    if (mode==='segments') ls.appendChild(head(`${vis.length} ${vis.length===1?'ruta passa':'rutes passen'} per aquest segment`));
+    vis.slice(0,200).forEach(r => ls.appendChild(trackItem(r, ()=>goTrack(r.id))));
+    if (vis.length>200) ls.appendChild(note(`…i ${vis.length-200} més (afina els filtres)`));
+  }
+  restyle();
+}
+document.getElementById('sub').textContent = `${R.length} rutes de Strava dins el Parc Natural · ${R.filter(r=>r.tipus==='carretera').length} carretera, ${R.filter(r=>r.tipus==='btt').length} BTT, ${R.filter(r=>r.tipus==='gravel').length} gravel`;
+render();
+</script>
+</body>
+</html>

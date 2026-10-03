@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Projectes</title>
+<style>
+  :root { --bg:#f6f5f1; --panel:#fff; --ink:#1f2421; --mut:#6b726d; --line:#dcdad2; --acc:#2f6f4f }
+  @media (prefers-color-scheme: dark) { :root { --bg:#161a17; --panel:#1f2521; --ink:#e8ebe6; --mut:#98a19a; --line:#343c36; --acc:#6fbf94 } }
+  * { box-sizing:border-box }
+  html,body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui,sans-serif }
+  main { max-width:760px; margin:0 auto; padding:40px 16px 56px }
+  h1 { font-size:26px; margin:0 0 4px } .sub { color:var(--mut); margin:0 0 28px }
+  ul { list-style:none; margin:0; padding:0; display:grid; gap:12px }
+  a.card { display:block; padding:16px 18px; background:var(--panel); border:1px solid var(--line); border-radius:10px; color:inherit; text-decoration:none }
+  a.card:hover, a.card:focus-visible { border-color:var(--acc); outline:none }
+  .t { font-weight:600; font-size:18px } .d { color:var(--mut); margin:4px 0 10px }
+  .meta { display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:12px; color:var(--mut) }
+  .tag { border:1px solid var(--line); border-radius:12px; padding:1px 8px }
+  .empty { color:var(--mut) }
+</style>
+</head>
+<body>
+<main>
+  <h1>Projectes</h1>
+  <p class="sub">Coses que vaig fent i que es poden provar des del navegador.</p>
+  <ul id="list"></ul>
+</main>
+<script src="projects.js"></script>
+<script>
+const ul = document.getElementById('list');
+if (!PROJECTS.length) ul.innerHTML = '<li class="empty">Encara no hi ha cap projecte.</li>';
+PROJECTS.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||'')).forEach(p => {
+  const li = document.createElement('li'), a = document.createElement('a');
+  a.className = 'card'; a.href = p.path;
+  a.innerHTML = '<div class="t"></div><div class="d"></div><div class="meta"></div>';
+  a.querySelector('.t').textContent = p.title; a.querySelector('.d').textContent = p.desc;
+  const m = a.querySelector('.meta');
+  (p.tags||[]).forEach(t => { const s = document.createElement('span'); s.className='tag'; s.textContent=t; m.appendChild(s); });
+  if (p.date) { const s = document.createElement('span'); s.textContent = p.date; m.appendChild(s); }
+  li.appendChild(a); ul.appendChild(li);
+});
+</script>
+</body>
+</html>
