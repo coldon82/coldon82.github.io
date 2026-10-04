@@ -15,7 +15,10 @@
   * { box-sizing:border-box }
   html,body { margin:0; height:100%; background:var(--bg); color:var(--ink); font:14px/1.4 system-ui,sans-serif }
   #app { display:grid; grid-template-columns:340px 1fr; height:100% }
-  aside { background:var(--panel); border-right:1px solid var(--line); overflow:auto; padding:14px 16px 24px }
+  aside { background:var(--panel); border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; overflow:hidden }
+  #filters { flex:0 1 auto; max-height:62%; overflow:auto; padding:14px 16px 10px; border-bottom:1px solid var(--line) }
+  .statbar { position:sticky; top:0; z-index:2; background:var(--panel); padding:8px 0 6px; border-bottom:1px solid var(--line) } .statbar .stat { margin:0 0 6px }
+  #results { flex:1 1 0; min-height:150px; overflow:auto; padding:0 16px 24px; position:relative }
   h1 { font-size:17px; margin:0 0 2px } .sub { color:var(--mut); font-size:12px; margin-bottom:12px }
   fieldset { border:0; border-top:1px solid var(--line); margin:0; padding:10px 0 4px }
   legend { padding:0 6px 0 0; font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--mut) }
@@ -23,12 +26,12 @@
   .dot { width:10px; height:10px; border-radius:50%; display:inline-block }
   .rng { margin:6px 0 10px } .rng .row { display:flex; justify-content:space-between; font-size:12px; color:var(--mut) }
   .rng .row b { color:var(--ink) }
-  .dual { position:relative; height:22px }
-  .dual input { position:absolute; width:100%; pointer-events:none; -webkit-appearance:none; background:none; margin:0; top:2px }
-  .dual input::-webkit-slider-thumb { pointer-events:auto; -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:var(--acc); border:2px solid var(--panel); box-shadow:0 0 0 1px var(--acc); cursor:pointer }
-  .dual input::-moz-range-thumb { pointer-events:auto; width:12px; height:12px; border-radius:50%; background:var(--acc); border:2px solid var(--panel); cursor:pointer }
-  .dual .track { position:absolute; left:0; right:0; top:10px; height:3px; background:var(--line); border-radius:2px }
-  .dual .fill { position:absolute; top:10px; height:3px; background:var(--acc); border-radius:2px }
+  .dual { position:relative; height:38px; margin:2px 12px; touch-action:none; cursor:pointer; user-select:none; -webkit-user-select:none }
+  .dual .track { position:absolute; left:0; right:0; top:17px; height:4px; background:var(--line); border-radius:2px }
+  .dual .fill { position:absolute; top:17px; height:4px; background:var(--acc); border-radius:2px }
+  .dual .h { position:absolute; top:7px; width:24px; height:24px; margin-left:-12px; border-radius:50%; background:var(--acc); border:3px solid var(--panel); box-shadow:0 0 0 1px var(--acc); touch-action:none; outline:none }
+  .dual .h::after { content:''; position:absolute; inset:-10px }
+  .dual .h:focus-visible { box-shadow:0 0 0 3px var(--panel), 0 0 0 5px var(--acc) }
   select,input[type=text] { width:100%; padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--ink); font:inherit }
   .sec button { margin:0 6px 6px 0; padding:5px 10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); border-radius:16px; cursor:pointer; font:inherit }
   .sec button.on { background:var(--acc); color:#fff; border-color:var(--acc) }
@@ -53,6 +56,8 @@
   .prof .lbl { font-size:10px; fill:var(--mut) } .prof .ax { stroke:var(--line); stroke-width:1 } .prof .ln { fill:none; stroke:var(--acc); stroke-width:1.6; stroke-linejoin:round }
   .prof .ar { fill:var(--acc); opacity:.18 } .prof .cur { stroke:var(--ink); stroke-width:1; stroke-dasharray:3 2 } .prof .dot { fill:var(--acc); stroke:var(--panel); stroke-width:2 }
   .prof .read { font-size:11px; fill:var(--ink); font-variant-numeric:tabular-nums }
+  .boxctl a { width:30px; height:30px; line-height:30px; text-align:center; font-size:18px; text-decoration:none; color:#222; background:#fff; cursor:pointer }
+  .boxctl a.on { background:var(--acc); color:#fff } .boxctl a[hidden] { display:none }
   .it.hov { outline:1px solid var(--acc); background:var(--line) }
   #onlybar[hidden] { display:none }
   #onlybar .ctx { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
@@ -61,12 +66,27 @@
   .gpx:hover { text-decoration:underline }
   .reset { margin-top:8px; margin-right:6px; background:none; border:1px solid var(--line); color:var(--ink); padding:5px 10px; border-radius:6px; cursor:pointer }
   .leaflet-container { background:var(--bg) }
-  @media (max-width:760px){ #app{ grid-template-columns:1fr; grid-template-rows:55% 45% } aside{ order:2; border-right:0; border-top:1px solid var(--line) } #map{ order:1 } }
+  #mbar { display:none }
+  @media (max-width:760px){
+    #app { grid-template-columns:1fr; grid-template-rows:34% auto minmax(0,1fr) }
+    body[data-view=map] #app { grid-template-rows:minmax(0,1fr) auto 0 }
+    body[data-view=list] #app { grid-template-rows:0 auto minmax(0,1fr) }
+    #map { order:1; min-height:0 }
+    #mbar { order:2; display:flex; align-items:center; gap:6px; padding:6px 10px; background:var(--panel); border-top:1px solid var(--line); border-bottom:1px solid var(--line) }
+    #mbar button { padding:7px 14px; border:1px solid var(--line); border-radius:18px; background:var(--bg); color:var(--ink); font:inherit; font-weight:600; cursor:pointer }
+    #mbar button.on { background:var(--acc); color:#fff; border-color:var(--acc) }
+    #mcount { margin-left:auto; font-weight:600; white-space:nowrap }
+    aside { order:3; display:block; overflow:auto; border-right:0; -webkit-overflow-scrolling:touch }
+    #filters { max-height:none; overflow:visible }
+    #results { overflow:visible; min-height:100vh; flex:none }   /* evita que el panell s'encongeixi i els controls saltin sota el dit en filtrar */
+    label.chk { padding:6px 2px } .sec button { padding:8px 14px }
+  }
 </style>
 </head>
-<body>
+<body data-view="split">
 <div id="app">
   <aside>
+    <div id="filters">
     <a href="../" style="font-size:12px;color:var(--mut);text-decoration:none">← Projectes</a>
     <h1>Rutes de bici · Collserola</h1>
     <div class="sub" id="sub"></div>
@@ -86,9 +106,10 @@
     </fieldset>
 
     <fieldset><legend>Topònim proper</legend>
-      <input type="text" id="tq" placeholder="Cerca cim, coll o indret…" list="topolist">
+      <select id="tgroup" aria-label="Tipus de topònim" style="margin-bottom:6px"><option value="">Tots els tipus</option></select>
+      <input type="text" id="tq" placeholder="Cerca cim, coll, font, mas…" list="topolist">
       <datalist id="topolist"></datalist>
-      <div class="sub" style="margin:4px 0 0">Rutes que passen a menys de 300 m.</div>
+      <div class="sub" style="margin:4px 0 0">Rutes que passen a menys de 300 m. Topònims de l'ICGC.</div>
     </fieldset>
 
     <fieldset><legend>Mesures</legend>
@@ -97,15 +118,21 @@
       <div class="rng" data-k="min" data-u="min"></div>
     </fieldset>
 
+    </div>
+    <div id="results">
+    <div class="statbar">
     <div class="stat"><div><b id="n">0</b>rutes</div><div><b id="skm">0</b>km</div><div><b id="sdesn">0</b>m↑</div></div>
     <button class="reset" id="reset">Reinicia filtres</button>
     <button class="reset" id="gpxall">Descarrega GPX filtrades</button>
+    </div>
     <div id="onlybar" hidden><div class="ctx"><i></i> <b></b></div><div class="acts"><button class="reset" id="back">← Enrere</button><button class="reset" id="clearonly"></button></div></div>
     <input type="text" id="sfind" placeholder="Cerca un segment…" hidden>
     <div class="sub" id="segnote" hidden></div>
     <div id="list"></div>
+    </div>
   </aside>
   <div id="map"></div>
+  <div id="mbar"><button data-v="map">Mapa</button><button data-v="split" class="on">Mixt</button><button data-v="list">Filtres</button><span id="mcount"></span></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -130,6 +157,7 @@ base['Topogràfic (ICGC)'].addTo(map);
 L.control.layers(base,null,{position:'topright'}).addTo(map);
 const park = L.polygon(DATA.parc,{color:'#2f6f4f',weight:2,fill:false,dashArray:'6 4'}).addTo(map);
 map.fitBounds(park.getBounds());
+map.attributionControl.addAttribution('Topònims © <a href="https://www.icgc.cat" target="_blank" rel="noopener">ICGC</a> (CC BY 4.0) · Perímetre del parc © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>');
 const zones = {};
 for (const [n,g] of Object.entries(DATA.sectors)) {
   zones[n] = L.polygon(g,{color:SECT_COL[n],weight:1,fillColor:SECT_COL[n],fillOpacity:.10,interactive:false}).addTo(map);
@@ -143,7 +171,7 @@ const R = DATA.rutes.map(r => ({...r, ll:decode(r.poly)}));
 const lines = R.map(r => L.polyline(r.ll,{color:COL[r.tipus],weight:3,opacity:.65,bubblingMouseEvents:false})
   .bindTooltip(r.nom,{sticky:true})
   .on('click',()=>goTrack(r.id))
-  .on('mouseover',()=>{ setHover([r.id]); const e=document.querySelector(`.it[data-id="${r.id}"]`); if(e) e.scrollIntoView({block:'nearest'}); })
+  .on('mouseover',()=>{ setHover([r.id]); revealInList(r.id); })
   .on('mouseout',()=>setHover([])));
 const byId = Object.fromEntries(R.map((r,i)=>[r.id,i]));
 
@@ -164,7 +192,7 @@ function downloadGPX(rs, filename){
 }
 let visible = [];
 let hover = null;               // Set d'ids ressaltats en passar el ratolí
-const F = {sector:null, topo:null, rng:{}};
+const F = {sector:null, topo:null, box:null, rng:{}};
 const SEGS = DATA.segs || [];
 const segCount = SEGS.map(()=>0);      // rutes (totals) que passen per cada segment
 R.forEach(r => (r.segs||[]).forEach(i => segCount[i]++));
@@ -180,10 +208,38 @@ document.querySelectorAll('.rng').forEach(el=>{
   const k = el.dataset.k, u = el.dataset.u;
   el.innerHTML = `<div class="row"><span>${LAB[k]}</span><span><b class="a"></b> – <b class="b"></b> ${u}</span></div>
     <div class="dual"><div class="track"></div><div class="fill"></div>
-    <input type="range" class="lo"><input type="range" class="hi"></div>`;
-  const a=el.querySelector('.lo'), b=el.querySelector('.hi');
-  rngUI[k] = {el, a, b, fill:el.querySelector('.fill'), lo:0, hi:0};
-  a.oninput = b.oninput = () => { F.rng[k] = [Math.min(+a.value,+b.value), Math.max(+a.value,+b.value)]; F.touched[k] = true; render(); };
+    <div class="h" data-w="lo" role="slider" tabindex="0" aria-label="${LAB[k]}, mínim"></div>
+    <div class="h" data-w="hi" role="slider" tabindex="0" aria-label="${LAB[k]}, màxim"></div></div>`;
+  const dual = el.querySelector('.dual'), a = el.querySelector('[data-w=lo]'), b = el.querySelector('[data-w=hi]');
+  const ui = rngUI[k] = {el, dual, a, b, fill:el.querySelector('.fill'), lo:0, hi:0, x:0, y:0};
+  const setVal = (w, v) => {                       // un extrem no pot passar l'altre
+    let x = ui.x, y = ui.y;
+    if (w==='lo') x = Math.min(v, y); else y = Math.max(v, x);
+    F.rng[k] = [Math.max(ui.lo, x), Math.min(ui.hi, y)]; F.touched[k] = true; selected = null; render();
+  };
+  const valAt = e => { const r = dual.getBoundingClientRect(); return Math.round(ui.lo + Math.min(1, Math.max(0, (e.clientX-r.left)/r.width)) * (ui.hi-ui.lo)); };
+  let active = null, pending = false, sx = 0;
+  dual.addEventListener('pointerdown', e => {      // agafa l'extrem més proper; si coincideixen, decideix la direcció de l'arrossegament
+    if (ui.hi === ui.lo) return;
+    e.preventDefault(); dual.setPointerCapture(e.pointerId);
+    const v = valAt(e), dl = Math.abs(v-ui.x), dh = Math.abs(v-ui.y), tol = 0.04*(ui.hi-ui.lo);
+    let w = null;
+    if (ui.x === ui.y) { if (Math.abs(v-ui.x) > tol) w = v > ui.x ? 'hi' : 'lo'; }     // coincidents: tocar a un costat tria l'extrem d'aquell costat
+    else if (dl !== dh) w = dl < dh ? 'lo' : 'hi';
+    if (w) { pending = false; active = w; setVal(w, v); }
+    else { pending = true; active = null; sx = e.clientX; }                            // sobre els dos extrems: decideix la direcció de l'arrossegament
+  });
+  dual.addEventListener('pointermove', e => {
+    if (!dual.hasPointerCapture(e.pointerId)) return;
+    if (pending) { if (Math.abs(e.clientX-sx) < 3) return; active = e.clientX < sx ? 'lo' : 'hi'; pending = false; }
+    if (active) setVal(active, valAt(e));
+  });
+  const end = e => { active = null; pending = false; if (dual.hasPointerCapture(e.pointerId)) dual.releasePointerCapture(e.pointerId); };
+  dual.addEventListener('pointerup', end); dual.addEventListener('pointercancel', end);
+  [a, b].forEach(h => h.addEventListener('keydown', e => {
+    const d = {ArrowLeft:-1, ArrowDown:-1, ArrowRight:1, ArrowUp:1, PageDown:-10, PageUp:10}[e.key]; if (!d) return;
+    e.preventDefault(); const w = h.dataset.w; setVal(w, (w==='lo' ? ui.x : ui.y) + d*(e.shiftKey ? 10 : 1));
+  }));
   el._reset = () => { F.touched[k] = false; render(); };
 });
 // pool = rutes que passen els filtres que no són rangs; cada rang s'ajusta segons els altres dos
@@ -194,13 +250,68 @@ function syncRanges(pool){
     let [x,y] = F.touched[k] ? F.rng[k] : [ui.lo, ui.hi];
     x = Math.max(ui.lo, Math.min(x, ui.hi)); y = Math.max(ui.lo, Math.min(y, ui.hi));
     if (F.touched[k]) F.rng[k] = [x,y];
-    for (const inp of [ui.a, ui.b]) { inp.min = ui.lo; inp.max = ui.hi; }
-    ui.a.value = x; ui.b.value = y;
+    ui.x = x; ui.y = y;
+    for (const h of [ui.a, ui.b]) { h.setAttribute('aria-valuemin', ui.lo); h.setAttribute('aria-valuemax', ui.hi); }
+    ui.a.setAttribute('aria-valuenow', x); ui.b.setAttribute('aria-valuenow', y);
     ui.el.querySelector('.a').textContent = fmtRng(k,x); ui.el.querySelector('.b').textContent = fmtRng(k,y);
     const span = ui.hi - ui.lo || 1;
     ui.fill.style.left = (x-ui.lo)/span*100+'%'; ui.fill.style.right = (100-(y-ui.lo)/span*100)+'%';
+    ui.a.style.left = (x-ui.lo)/span*100+'%'; ui.b.style.left = (y-ui.lo)/span*100+'%';
   });
 }
+
+// Selecció per requadre: només es mostren els tracks que tenen algun tram dins l'àrea
+function segHits(x0,y0,x1,y1,xmin,ymin,xmax,ymax){      // Liang-Barsky: el tram talla o és dins el rectangle?
+  let t0=0, t1=1; const dx=x1-x0, dy=y1-y0, p=[-dx,dx,-dy,dy], q=[x0-xmin,xmax-x0,y0-ymin,ymax-y0];
+  for (let i=0;i<4;i++){
+    if (p[i]===0) { if (q[i]<0) return false; }
+    else { const t=q[i]/p[i]; if (p[i]<0) { if (t>t1) return false; if (t>t0) t0=t; } else { if (t<t0) return false; if (t<t1) t1=t; } }
+  }
+  return true;
+}
+function hitsBox(r){
+  const b=F.box, xmin=b.getWest(), xmax=b.getEast(), ymin=b.getSouth(), ymax=b.getNorth();
+  if (!r._bb) { const la=r.ll.map(p=>p[0]), lo=r.ll.map(p=>p[1]); r._bb=[Math.min(...la),Math.min(...lo),Math.max(...la),Math.max(...lo)]; }
+  if (r._bb[3]<xmin || r._bb[1]>xmax || r._bb[2]<ymin || r._bb[0]>ymax) return false;
+  for (let i=1;i<r.ll.length;i++) if (segHits(r.ll[i-1][1],r.ll[i-1][0],r.ll[i][1],r.ll[i][0],xmin,ymin,xmax,ymax)) return true;
+  return false;
+}
+let drawing=false, boxStart=null, boxRect=null, boxSuppress=false;
+const BoxCtl = L.Control.extend({ onAdd(){
+  const d = L.DomUtil.create('div','leaflet-bar boxctl');
+  d.innerHTML = `<a href="#" id="boxdraw" title="Selecciona una àrea (arrossega sobre el mapa)">▭</a><a href="#" id="boxclear" title="Esborra l'àrea" hidden>✕</a>`;
+  L.DomEvent.disableClickPropagation(d); return d; } });
+map.addControl(new BoxCtl({position:'topleft'}));
+const boxDrawBtn = document.getElementById('boxdraw'), boxClearBtn = document.getElementById('boxclear'), mapEl = map.getContainer();
+function setDrawing(on){
+  drawing = on; boxDrawBtn.classList.toggle('on', on); mapEl.style.cursor = on ? 'crosshair' : '';
+  if (on) map.dragging.disable(); else map.dragging.enable();
+}
+function clearBox(){
+  F.box = null; boxStart = null; if (boxRect) { boxRect.remove(); boxRect = null; }
+  boxClearBtn.hidden = true; setDrawing(false); render();
+}
+boxDrawBtn.onclick = e => { e.preventDefault(); setDrawing(!drawing); };
+boxClearBtn.onclick = e => { e.preventDefault(); clearBox(); };
+mapEl.addEventListener('pointerdown', e => {
+  if (!drawing || e.button>0 || e.target.closest('.leaflet-control')) return;
+  e.preventDefault(); e.stopPropagation(); mapEl.setPointerCapture(e.pointerId);
+  boxStart = map.mouseEventToLatLng(e);
+  if (boxRect) boxRect.remove();
+  boxRect = L.rectangle([boxStart,boxStart],{color:'#2f6f4f',weight:2,dashArray:'6 4',fillOpacity:.08,interactive:false}).addTo(map);
+}, true);
+mapEl.addEventListener('pointermove', e => { if (drawing && boxStart) boxRect.setBounds(L.latLngBounds(boxStart, map.mouseEventToLatLng(e))); }, true);
+mapEl.addEventListener('pointerup', e => {
+  if (!drawing || !boxStart) return;
+  const b = L.latLngBounds(boxStart, map.mouseEventToLatLng(e)); boxStart = null;
+  boxSuppress = true; setTimeout(() => boxSuppress = false, 60);
+  const a = map.latLngToContainerPoint(b.getSouthWest()), c = map.latLngToContainerPoint(b.getNorthEast());
+  if (Math.abs(a.x-c.x) < 8 || Math.abs(a.y-c.y) < 8) { if (boxRect) { boxRect.remove(); boxRect = null; } setDrawing(false); return; }   // un clic sense arrossegar no és una àrea
+  F.box = b; boxRect.setBounds(b); boxRect.setStyle({dashArray:null, fillOpacity:.06});
+  boxClearBtn.hidden = false; setDrawing(false); render();
+}, true);
+mapEl.addEventListener('click', e => { if (drawing || boxSuppress) { e.stopPropagation(); e.preventDefault(); } }, true);
+document.addEventListener('keydown', e => { if (e.key==='Escape' && drawing) { boxStart = null; if (boxRect && !F.box) { boxRect.remove(); boxRect = null; } setDrawing(false); } });
 
 // sectors
 const secEl = document.getElementById('sectors');
@@ -212,14 +323,25 @@ secs.forEach(s=>{
   secEl.appendChild(b);
 });
 
-// topònims
-const tl = document.getElementById('topolist');
+// topònims (Base de dades de toponímia de Catalunya, ICGC)
+const tl = document.getElementById('topolist'), tgroup = document.getElementById('tgroup'), tq = document.getElementById('tq');
 const tcount = DATA.topos.map((_,i)=>R.filter(r=>r.topos.includes(i)).length);
 const tidx = DATA.topos.map((t,i)=>i).sort((a,b)=>DATA.topos[a].n.localeCompare(DATA.topos[b].n,'ca'));
-const label = i => `${DATA.topos[i].n}${DATA.topos[i].ele?' ('+Math.round(DATA.topos[i].ele)+' m)':''} · ${tcount[i]}`;
-tidx.forEach(i=>{const o=document.createElement('option'); o.value=label(i); tl.appendChild(o)});
-const tmap = Object.fromEntries(tidx.map(i=>[label(i).toLowerCase(),i]));
-const tq = document.getElementById('tq');
+const seenLbl = {}, tlabel = {};
+tidx.forEach(i => {                              // etiqueta única: nom (tipus) · rutes; si es repeteix, s'hi afegeix #2, #3…
+  const t = DATA.topos[i]; let l = `${t.n} (${t.k})`; const key = l.toLowerCase();
+  seenLbl[key] = (seenLbl[key]||0) + 1; if (seenLbl[key] > 1) l += ` #${seenLbl[key]}`;
+  tlabel[i] = `${l} · ${tcount[i]}`;
+});
+const tmap = Object.fromEntries(tidx.map(i=>[tlabel[i].toLowerCase(), i]));
+function fillTopos(){
+  tl.innerHTML = '';
+  tidx.forEach(i => { if (tgroup.value && DATA.topos[i].g !== tgroup.value) return; const o = document.createElement('option'); o.value = tlabel[i]; tl.appendChild(o); });
+}
+[...new Set(DATA.topos.map(t=>t.g))].sort((a,b)=>a.localeCompare(b,'ca')).forEach(g => {
+  const o = document.createElement('option'); o.value = g; o.textContent = `${g} (${DATA.topos.filter(t=>t.g===g).length})`; tgroup.appendChild(o);
+});
+tgroup.onchange = fillTopos; fillTopos();
 tq.oninput = () => {
   const v = tq.value.trim().toLowerCase();
   let i = tmap[v];
@@ -232,13 +354,31 @@ document.querySelectorAll('.tip').forEach(c=>c.onchange=render);
 document.getElementById('reset').onclick = () => {
   document.querySelectorAll('.tip').forEach(c=>c.checked=true);
   document.querySelectorAll('.rng').forEach(e=>e._reset());
-  tq.value=''; F.topo=null; sfind.value=''; segSel=null; hist.length=0; secEl.querySelector('button').click();
+  tq.value=''; F.topo=null; tgroup.value=''; fillTopos(); sfind.value=''; segSel=null; hist.length=0; if (F.box) clearBox(); secEl.querySelector('button').click();
 };
 
 // Navegació: track -> els seus segments -> rutes d'un segment -> track...
-const asideEl = document.querySelector('aside');
+const asideEl = document.getElementById('results');       // contenidor amb scroll del llistat (escriptori)
+const asideRoot = document.querySelector('aside');
+const scrollEl = () => getComputedStyle(asideEl).overflowY === 'visible' ? asideRoot : asideEl;   // al mòbil fa scroll tot el panell
+const isMobile = () => matchMedia('(max-width:760px)').matches;
+let mview = 'split';
+function setView(v){            // mòbil: només mapa, mapa + panell, o només panell
+  mview = v; document.body.dataset.view = v;
+  document.querySelectorAll('#mbar button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  map.invalidateSize({animate:false});
+}
+document.querySelectorAll('#mbar button').forEach(b => b.onclick = () => setView(b.dataset.v));
+addEventListener('resize', () => map.invalidateSize({animate:false}));
+function revealInList(id){      // mostra l'element dins el llistat sense moure res més
+  if (scrollEl() !== asideEl) return;
+  const e = asideEl.querySelector(`.it[data-id="${id}"]`); if (!e) return;
+  const bar = asideEl.querySelector('.statbar').offsetHeight;      // la barra enganxada tapa la part de dalt
+  if (e.offsetTop - bar < asideEl.scrollTop) asideEl.scrollTop = e.offsetTop - bar - 8;
+  else if (e.offsetTop + e.offsetHeight > asideEl.scrollTop + asideEl.clientHeight) asideEl.scrollTop = e.offsetTop + e.offsetHeight - asideEl.clientHeight + 8;
+}
 const hist = [];                 // vistes anteriors (mode, selecció, cerca, scroll i vista del mapa)
-const snap = () => ({mode, selected, segSel, find:sfind.value, scroll:asideEl.scrollTop, c:map.getCenter(), z:map.getZoom()});
+const snap = () => ({mode, selected, segSel, find:sfind.value, scroll:scrollEl().scrollTop, c:map.getCenter(), z:map.getZoom()});
 function setTabs(){
   document.getElementById('m-tracks').classList.toggle('on', mode==='tracks');
   document.getElementById('m-segs').classList.toggle('on', mode==='segments');
@@ -247,7 +387,7 @@ function goBack(){
   const s = hist.pop(); if (!s) return;
   mode = s.mode; selected = s.selected; segSel = s.segSel; sfind.value = s.find;
   setTabs(); render();
-  map.setView(s.c, s.z, {animate:false}); asideEl.scrollTop = s.scroll;
+  map.setView(s.c, s.z, {animate:false}); scrollEl().scrollTop = s.scroll;
 }
 function setMode(m){
   hist.length = 0;
@@ -260,11 +400,13 @@ function goTrack(id){            // aïlla un track (mode tracks); tornar-hi a c
   if (mode==='tracks' && selected===id) return clearOnly();
   hist.push(snap());
   mode = 'tracks'; segSel = null; selected = id;
+  if (isMobile() && mview === 'list') setView('split');      // al mòbil, veure el track al mapa
   setTabs(); render(); map.fitBounds(lines[byId[id]].getBounds(),{padding:[30,30]});
 }
 function goSegment(i){           // mostra les rutes que passen per un segment (mode segments)
   hist.push(snap());
   mode = 'segments'; selected = null; segSel = i;
+  if (isMobile() && mview === 'list') setView('split');
   setTabs(); render();
   if (visible.length) map.fitBounds(L.featureGroup(visible.map(r=>lines[byId[r.id]])).getBounds(),{padding:[30,30]});
 }
@@ -371,6 +513,7 @@ function render(){
   const pool = R.filter(r => tipus.has(r.tipus)
       && (!F.sector || (r.sectors[F.sector]||0) >= .2)
       && (F.topo===null || r.topos.includes(F.topo))
+      && (!F.box || hitsBox(r))
       && (mode!=='segments' || segSel===null || (r.segs||[]).includes(segSel)));
   syncRanges(pool);
   const base = pool.filter(r => rangeOk(r));
@@ -387,6 +530,7 @@ function render(){
   visible = vis;
   document.getElementById('back').hidden = !hist.length;
   document.getElementById('n').textContent = vis.length;
+  document.getElementById('mcount').textContent = `${vis.length} ${vis.length===1?'ruta':'rutes'}`;
   document.getElementById('skm').textContent = Math.round(vis.reduce((s,r)=>s+r.km,0));
   document.getElementById('sdesn').textContent = vis.reduce((s,r)=>s+r.desn,0).toLocaleString('ca');
 
