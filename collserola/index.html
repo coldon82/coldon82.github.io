@@ -139,7 +139,8 @@
 <script src="data.js"></script>
 <script>
 const COL = {carretera:'#d94f3d', btt:'#2f7fc1', gravel:'#d9962b'};
-const SECT_COL = {'Cerdanyola':'#8e5ea2','Sant Cugat':'#3a9d6e','Sant Just':'#c9763a','Molins':'#3b82b6'};
+const SECT_PAL = ['#c9763a','#3b82b6','#2f9e8f','#3a9d6e','#8e5ea2','#c2527a','#6b7f2a','#b5651d'];
+const SECT_COL = {}; Object.keys(DATA.sectors).forEach((n,i) => SECT_COL[n] = SECT_PAL[i % SECT_PAL.length]);
 const LAB = {km:'Longitud', desn:'Desnivell +', min:'Temps (mov.)'};
 
 function decode(s){let i=0,lat=0,lon=0,o=[];while(i<s.length){for(let k=0;k<2;k++){let sh=0,r=0,b;do{b=s.charCodeAt(i++)-63;r|=(b&31)<<sh;sh+=5}while(b>=32);const d=(r&1)?~(r>>1):(r>>1);k?lon+=d:lat+=d}o.push([lat/1e5,lon/1e5])}return o}
@@ -161,8 +162,8 @@ map.attributionControl.addAttribution('Topònims © <a href="https://www.icgc.ca
 const zones = {};
 for (const [n,g] of Object.entries(DATA.sectors)) {
   zones[n] = L.polygon(g,{color:SECT_COL[n],weight:1,fillColor:SECT_COL[n],fillOpacity:.10,interactive:false}).addTo(map);
-  const c = zones[n].getBounds().getCenter();
-  L.marker(c,{interactive:false,icon:L.divIcon({className:'',html:`<div style="font:600 12px system-ui;color:${SECT_COL[n]};text-shadow:0 0 3px #fff,0 0 3px #fff">${n}</div>`})}).addTo(map);
+  const c = (DATA.sector_labels && DATA.sector_labels[n]) || zones[n].getBounds().getCenter();
+  L.marker(c,{interactive:false,icon:L.divIcon({className:'',iconSize:[0,0],html:`<div style="font:600 12px system-ui;white-space:nowrap;transform:translate(-50%,-50%);color:${SECT_COL[n]};text-shadow:0 0 3px #fff,0 0 3px #fff">${n}</div>`})}).addTo(map);
 }
 const topoLayer = L.layerGroup().addTo(map);
 const profLayer = L.layerGroup().addTo(map);   // punt que segueix el cursor sobre el perfil
@@ -511,7 +512,7 @@ function render(){
   const tipus = new Set([...document.querySelectorAll('.tip:checked')].map(c=>c.value));
   // rutes que compleixen els filtres (sense tenir en compte l'aïllament ni el segment triat)
   const pool = R.filter(r => tipus.has(r.tipus)
-      && (!F.sector || (r.sectors[F.sector]||0) >= .2)
+      && (!F.sector || (r.sectors[F.sector]||0) > (DATA.sector_min_share ?? .2))
       && (F.topo===null || r.topos.includes(F.topo))
       && (!F.box || hitsBox(r))
       && (mode!=='segments' || segSel===null || (r.segs||[]).includes(segSel)));
