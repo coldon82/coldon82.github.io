@@ -60,6 +60,15 @@
   .boxctl a.on { background:var(--acc); color:#fff } .boxctl a[hidden] { display:none }
   .it.hov { outline:1px solid var(--acc); background:var(--line) }
   #onlybar[hidden] { display:none }
+  .reset.lucky { background:var(--acc); color:#fff; border-color:var(--acc); font-weight:600 }
+  .reset.lucky:disabled { opacity:.6; cursor:default }
+  #roulette { margin:8px 0 2px; padding:8px 10px; border:2px solid var(--acc); border-radius:8px; background:var(--bg); border-left-width:8px; border-left-color:var(--c,var(--acc)) }
+  #roulette[hidden] { display:none }
+  #roulette .rn { font-weight:700; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  #roulette .rm { font-size:12px; color:var(--mut) }
+  #roulette.spin .rn { opacity:.75 } #roulette.won { animation:rwin .6s ease-out }
+  @keyframes rwin { 0%{transform:scale(.94)} 60%{transform:scale(1.04)} 100%{transform:scale(1)} }
+  @media (prefers-reduced-motion: reduce) { #roulette.won { animation:none } }
   #onlybar .ctx { overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
   .it .m { display:flex; justify-content:space-between; gap:8px }
   .gpx { color:var(--acc); text-decoration:none; font-weight:600; white-space:nowrap }
@@ -124,6 +133,8 @@
     <div class="stat"><div><b id="n">0</b>rutes</div><div><b id="skm">0</b>km</div><div><b id="sdesn">0</b>m↑</div></div>
     <button class="reset" id="reset">Reinicia filtres</button>
     <button class="reset" id="gpxall">Descarrega GPX filtrades</button>
+    <button class="reset lucky" id="lucky" title="Tria a l'atzar una ruta entre les que passen els filtres">🎲 Ruleta</button>
+    <div id="roulette" hidden aria-live="polite"><div class="rn"></div><div class="rm"></div></div>
     </div>
     <div id="onlybar" hidden><div class="ctx"><i></i> <b></b></div><div class="acts"><button class="reset" id="back">← Enrere</button><button class="reset" id="clearonly"></button></div></div>
     <input type="text" id="sfind" placeholder="Cerca un segment…" hidden>
@@ -192,6 +203,7 @@ function downloadGPX(rs, filename){
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 let visible = [];
+let pool_ = [];                  // rutes que passen tots els filtres (sense aïllament): candidates de la ruleta
 let hover = null;               // Set d'ids ressaltats en passar el ratolí
 const F = {sector:null, topo:null, box:null, rng:{}};
 const SEGS = DATA.segs || [];
@@ -427,6 +439,35 @@ document.getElementById('back').onclick = goBack;
 document.querySelector('aside').addEventListener('input', e => { if (e.target.closest('fieldset')) selected = null; }, true);
 document.querySelector('aside').addEventListener('click', e => { if (e.target.closest('fieldset, #reset')) selected = null; }, true);
 
+// Ruleta: tria una ruta a l'atzar entre les que passen els filtres i les va il·luminant al mapa mentre frena
+const luckyBtn = document.getElementById('lucky'), rouEl = document.getElementById('roulette');
+let spinning = false;
+function rouShow(r, cls){
+  rouEl.hidden = false; rouEl.className = cls; rouEl.style.setProperty('--c', COL[r.tipus]);
+  rouEl.querySelector('.rn').textContent = r.nom;
+  rouEl.querySelector('.rm').textContent = `${r.data} · ${r.km} km · ${r.desn} m↑ · ${fmtMin(r.min)} · ${r.tipus}`;
+}
+function spin(){
+  if (spinning) return;
+  const cand = pool_.slice();
+  if (!cand.length) { rouEl.hidden = false; rouEl.className = ''; rouEl.style.removeProperty('--c'); rouEl.querySelector('.rn').textContent = 'Cap ruta amb aquests filtres'; rouEl.querySelector('.rm').textContent = 'Afluixa algun filtre i torna-ho a provar.'; return; }
+  if (selected !== null || segSel !== null) clearOnly();       // torna a mostrar totes les candidates al mapa
+  const win = cand[Math.floor(Math.random()*cand.length)];
+  if (isMobile() && mview === 'list') setView('split');
+  const land = () => { spinning = false; luckyBtn.disabled = false; setHover([]); rouShow(win, 'won'); goTrack(win.id); };
+  if (cand.length === 1 || matchMedia('(prefers-reduced-motion: reduce)').matches) return land();
+  spinning = true; luckyBtn.disabled = true;
+  const N = 24; let k = 0, prev = null;
+  (function tick(){
+    let r = win;
+    if (k < N) { do r = cand[Math.floor(Math.random()*cand.length)]; while (r === prev); }
+    prev = r; k++;
+    rouShow(r, 'spin'); setHover([r.id]);
+    if (k <= N) setTimeout(tick, 55 + Math.pow(k/N, 3)*420);
+    else land();
+  })();
+}
+luckyBtn.onclick = spin;
 function trackItem(r, onclick){
   const d=document.createElement('div'); d.className='it'+(r.id===selected?' sel':''); d.dataset.id=r.id; d.style.setProperty('--c',COL[r.tipus]);
   d.innerHTML=`<div class="t"></div><div class="m"><span>${r.data} · ${r.km} km · ${r.desn} m↑ · ${fmtMin(r.min)} · ${r.sector||''}</span><a class="gpx" href="#" title="Descarrega GPX">GPX ⬇</a></div>`;
@@ -528,7 +569,7 @@ function render(){
   topoLayer.clearLayers();
   if (F.topo!==null) { const t=DATA.topos[F.topo]; L.circle(t.ll,{radius:300,color:'#000',weight:1,fillOpacity:.05}).addTo(topoLayer);
     L.marker(t.ll).bindTooltip(t.n,{permanent:true}).addTo(topoLayer); if(vis.length===0) map.setView(t.ll,14); }
-  visible = vis;
+  visible = vis; pool_ = base;
   document.getElementById('back').hidden = !hist.length;
   document.getElementById('n').textContent = vis.length;
   document.getElementById('mcount').textContent = `${vis.length} ${vis.length===1?'ruta':'rutes'}`;
